@@ -1,0 +1,55 @@
+name: Generate Breakout SVGs
+
+on:
+  # daily at 00:00 UTC; change the cron if you want another schedule
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate-svg:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate SVGs
+        uses: cyprieng/github-breakout@v1
+        with:
+          github_username: ${{ github.repository_owner }}
+          # Optionally override inputs:
+          # github_token: ${{ secrets.GITHUB_TOKEN }}
+          # enable_ghost_bricks: true
+          # paddle_color: '#006064'
+          # ball_color: '#006064'
+          # bricks_colors: '#e0f7fa,#b2ebf2,#4dd0e1,#0097a7,#006064'
+
+      - name: Collect generated files
+        run: |
+          mkdir -p /tmp/breakout-images
+          [ -f output/light.svg ] && mv output/light.svg /tmp/breakout-images/breakout-light.svg || true
+          [ -f output/dark.svg ] && mv output/dark.svg /tmp/breakout-images/breakout-dark.svg || true
+          [ -f output/custom.svg ] && mv output/custom.svg /tmp/breakout-images/breakout-custom.svg || true
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit and force-push SVGs to github-breakout branch
+        run: |
+          # create an orphan branch so the branch only contains generated images
+          git checkout --orphan github-breakout
+          git rm -rf .
+          mkdir -p images
+          mv /tmp/breakout-images/* images/ || true
+          git add images
+          git commit -m "chore: update GitHub breakout SVGs" || echo "No changes to commit"
+          git push --force origin github-breakout
