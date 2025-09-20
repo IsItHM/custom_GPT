@@ -1,2 +1,0 @@
-- name: generate-breakout-game-from-github-contribution-graph
-  uses: IsItHM/github-breakout@v1.2.1
